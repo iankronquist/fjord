@@ -1,4 +1,6 @@
 from django.conf.urls import patterns, url
+from fjord.analytics.views import ProductsUpdateView
+from django.contrib.auth.decorators import login_required
 
 
 urlpatterns = patterns(
@@ -21,6 +23,10 @@ urlpatterns = patterns(
 
     # Temporary!: The under construction view
     url(r'^underc/?$', 'underconstruction', name='underconstruction'),
+
+    # Show a page to add new products
+    url(r'^addproducts', login_required(ProductsUpdateView.as_view())),
+    #url(r'^addproducts', (ProductsUpdateView.as_view())),
 )
 
 # These are analyzer-group only views.

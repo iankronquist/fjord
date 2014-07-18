@@ -1,0 +1,26 @@
+{% extends "analytics/dashboard_base.html" %}
+{% block content %}
+	<table>
+		<tr>
+		<th><b>Display Name</b></th>
+		<th><b>SLUG</b></th>
+		<th><b>On Dashboard?</b></th>
+		<th><b>Enabled?</b></th>
+		</tr>
+		{% for product in products %}
+			<tr>
+			<td>{{ product.display_name }}</td>
+			<td>{{ product.slug }}</td>
+			<td>{{ product.on_dashboard }}</td>
+			<td>{{ product.enabled }}</td>
+			</tr>
+		{% endfor %}
+	</table>
+	<br>
+	<b>Add or Update a product</b>
+	<form action='' method='post'>
+		{{ csrf() }}
+		{{ form }}
+		<input type="submit">
+	</form>
+{% endblock %}

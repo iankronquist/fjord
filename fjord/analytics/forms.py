@@ -30,3 +30,11 @@ class OccurrencesComparisonForm(forms.Form):
                 'date for first set.')
 
         return cleaned_data
+
+class ProductsUpdateForm(forms.Form):
+    display_name = forms.CharField(max_length=20)
+    slug = forms.CharField(max_length=20)
+    enabled_choices = (('1', 'Enable',), ('0', 'Disable',))
+    enabled = forms.ChoiceField(widget=forms.RadioSelect, choices=enabled_choices)
+    show_choices = (('1', 'Show',), ('0', 'Hide',))
+    on_dashboard = forms.ChoiceField(widget=forms.RadioSelect, choices=show_choices)

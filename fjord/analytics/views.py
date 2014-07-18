@@ -6,13 +6,18 @@ from datetime import date, timedelta
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.core.context_processors import csrf
+from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
+from django.views.decorators.csrf import csrf_protect
+from django.template import RequestContext
 from django.http import (
     HttpResponse,
     HttpResponseForbidden,
     HttpResponseRedirect
 )
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, render_to_response
 from django.views.decorators.http import require_POST
+from django.views.generic.edit import FormView
 
 from elasticsearch import ElasticsearchException
 from elasticutils.contrib.django import F, es_required_or_50x
@@ -38,7 +43,7 @@ from fjord.journal.models import Record
 from fjord.search.utils import es_error_statsd
 from fjord.translations.models import GengoJob, get_translation_systems
 from fjord.translations.tasks import create_translation_tasks
-
+from fjord.analytics.forms import ProductsUpdateForm
 
 @check_new_user
 @require_POST
@@ -711,3 +716,52 @@ def product_dashboard_router(request, productslug):
     # should handle that.
     fun = PRODUCT_TO_DASHBOARD.get(productslug, product_dashboard_generic)
     return fun(request, prod)
+
+class ProductsUpdateView(FormView):
+    """An administrator view for showing, adding, and updating the products."""
+    template_name = 'analytics/addproducts.html'
+    form_class = ProductsUpdateForm
+    success_url = 'addproducts'
+
+    def get_context_data(self, **kwargs):
+        context = super(ProductsUpdateView, self).get_context_data(**kwargs)
+        context['products'] = Product.uncached.all()
+        return context
+
+    def form_valid(self, form):
+        if not 'display_name' in form.data:
+            messages.error(self.request, 'You must provide a product name.')
+        else:
+            self.add_or_update_product(form)
+        return super(ProductsUpdateView, self).form_valid(form)
+
+    def add_or_update_product(self, form):
+        """Use the form data to update the product or add a new one"""
+        # display_name must exist for the form to be valid.
+        display_name = form.data.get("display_name")
+        try:
+            objectToUpdate = Product.objects.get(display_name=display_name)
+        except ObjectDoesNotExist:
+            objectToUpdate = Product()
+            objectToUpdate.display_name = display_name
+        except MultipleObjectsReturned:
+            # If there are already multiple products with the same display_name
+            # then refuse to do anything. This should not happen, but it is a
+            # possibility if the tables have been edited manually.
+            messages.error(self.request, 'The product has already been added.')
+            return super(ProductsUpdateView, self).form_valid(form)
+        objectToUpdate.db_name = display_name
+        objectToUpdate.translation_system = ''
+        objectToUpdate.slug = form.data.get('slug')
+        if form.data.get('enabled') == u'1':
+            objectToUpdate.enabled = True
+        else:
+            objectToUpdate.enabled = False
+        if form.data.get('on_dashboard') == u'1':
+            objectToUpdate.on_dashboard = True
+        else:
+            objectToUpdate.on_dashboard = False
+        objectToUpdate.save()
+        messages.success(self.request, 'The product %s was added.' % (
+            display_name))
+        return super(ProductsUpdateView, self).form_valid(form)
