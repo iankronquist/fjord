@@ -1,5 +1,7 @@
 from django import forms
 
+from fjord.feedback.models import Product
+
 
 class OccurrencesComparisonForm(forms.Form):
     """Form for denoting parameters for the Occurrences Comparison report"""
@@ -31,10 +33,15 @@ class OccurrencesComparisonForm(forms.Form):
 
         return cleaned_data
 
-class ProductsUpdateForm(forms.Form):
-    display_name = forms.CharField(max_length=20)
-    slug = forms.CharField(max_length=20)
-    enabled_choices = (('1', 'Enable',), ('0', 'Disable',))
-    enabled = forms.ChoiceField(widget=forms.RadioSelect, choices=enabled_choices)
-    show_choices = (('1', 'Show',), ('0', 'Hide',))
-    on_dashboard = forms.ChoiceField(widget=forms.RadioSelect, choices=show_choices)
+
+class ProductsUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = [
+            'enabled',
+            'display_name',
+            'db_name',
+            'slug',
+            'on_dashboard',
+            'notes'
+        ]
